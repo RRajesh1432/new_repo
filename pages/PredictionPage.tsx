@@ -1,63 +1,31 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import PredictionForm from '../components/PredictionForm';
 import ResultsDisplay from '../components/ResultsDisplay';
 import Loader from '../components/Loader';
-import { predictYield } from '../services/geminiService';
-import { savePredictionToHistory } from '../services/historyService';
-import { CropType, SoilType, FertilizerType } from '../types';
 import type { PredictionFormData, PredictionResult } from '../types';
 import MapInput from '../components/MapInput';
 
-
-const PredictionPage: React.FC = () => {
-    const [formData, setFormData] = useState<PredictionFormData>({
-        cropType: CropType.Wheat,
-        fieldShape: '',
-        soilType: SoilType.Loamy,
-        rainfall: 450,
-        temperature: 22,
-        pesticideUsage: false,
-        fertilizerType: FertilizerType['Nitrogen-based'],
-        area: 0,
-    });
-    const [result, setResult] = useState<PredictionResult | null>(null);
-    const [isLoading, setIsLoading] = useState<boolean>(false);
-    const [error, setError] = useState<string | null>(null);
-
-    const handleShapeChange = (shapeGeoJSON: string, areaHectares: number) => {
-        setFormData(prev => ({
-            ...prev,
-            fieldShape: shapeGeoJSON,
-            area: parseFloat(areaHectares.toFixed(2))
-        }));
-    };
+interface PredictionPageProps {
+    formData: PredictionFormData;
+    setFormData: React.Dispatch<React.SetStateAction<PredictionFormData>>;
+    result: PredictionResult | null;
+    isLoading: boolean;
+    error: string | null;
+    handleShapeChange: (shapeGeoJSON: string, areaHectares: number) => void;
+    handleSubmit: (e: React.FormEvent) => void;
+}
 
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setIsLoading(true);
-        setError(null);
-        setResult(null);
-
-        try {
-            const predictionResult = await predictYield(formData);
-            setResult(predictionResult);
-            // Save to history
-            const historyEntry = {
-                id: new Date().toISOString(),
-                timestamp: new Date().toLocaleString(),
-                formData,
-                result: predictionResult,
-            };
-            savePredictionToHistory(historyEntry);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'An unknown error occurred.');
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
+const PredictionPage: React.FC<PredictionPageProps> = ({
+    formData,
+    setFormData,
+    result,
+    isLoading,
+    error,
+    handleShapeChange,
+    handleSubmit,
+}) => {
     return (
         <div className="max-w-7xl mx-auto space-y-8">
             <div className="text-center">

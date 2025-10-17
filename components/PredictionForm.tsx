@@ -1,6 +1,6 @@
 import React from 'react';
 import type { PredictionFormData } from '../types';
-import { CROP_TYPES, SOIL_TYPES, FERTILIZER_TYPES } from '../constants';
+import { CROP_TYPES, SOIL_TYPES, FERTILIZER_TYPES, WATER_SOURCES } from '../constants';
 
 interface PredictionFormProps {
     formData: PredictionFormData;
@@ -49,6 +49,12 @@ const PredictionForm: React.FC<PredictionFormProps> = ({ formData, setFormData, 
                 <InputField label="Fertilizer Type">
                     <select name="fertilizerType" value={formData.fertilizerType} onChange={handleChange} className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm rounded-md shadow-sm">
                         {FERTILIZER_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
+                    </select>
+                </InputField>
+
+                <InputField label="Source of Water">
+                    <select name="waterSource" value={formData.waterSource} onChange={handleChange} className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm rounded-md shadow-sm">
+                        {WATER_SOURCES.map(type => <option key={type} value={type}>{type}</option>)}
                     </select>
                 </InputField>
                 

@@ -71,18 +71,33 @@ const generatePrompt = (data: PredictionFormData): string => {
         ? "Pesticide Usage is 'Yes'. This is a critical protective measure that actively prevents crop loss. You MUST model a higher yield potential (e.g., a 5-15% increase over the baseline) due to effective pest control. Risks from common pests should be considered minimal."
         : "Pesticide Usage is 'No'. This exposes the crop to significant risk. You MUST factor in a notable yield reduction (e.g., a 5-15% decrease from the baseline) due to unmitigated pest damage. You MUST also list a risk factor with the risk 'High risk of pest infestation' and severity 'High'.";
         
+    let waterSourceGuidance = '';
+    switch (data.waterSource) {
+        case 'Rainfed':
+            waterSourceGuidance = "The crop is rainfed. This makes it highly dependent on natural rainfall. If rainfall is low or inconsistent, this MUST be considered a HIGH risk factor for yield reduction.";
+            break;
+        case 'Canal Irrigation':
+        case 'Well Irrigation':
+        case 'River/Lake':
+        case 'Drip Irrigation':
+            waterSourceGuidance = `The crop uses a reliable irrigation method (${data.waterSource}). This significantly mitigates risks associated with low rainfall and should be considered a positive factor for yield stability and potential.`;
+            break;
+    }
+
     return `
       Analyze the following agricultural data to predict crop yield and provide recommendations.
       The output must be a JSON object matching the provided schema.
 
       **Critical Interpretation Guidance:**
       - **Pesticide Usage**: ${pesticideGuidance}
+      - **Water Source**: ${waterSourceGuidance}
       - For riskFactors, provide a 'risk' description and a 'severity' level ('High', 'Medium', 'Low') for each identified risk.
 
       Farm Data:
       - Crop Type: ${data.cropType}
       - Field Shape (GeoJSON): ${data.fieldShape || 'Not provided'}
       - Soil Type: ${data.soilType}
+      - Water Source: ${data.waterSource}
       - Annual Rainfall (mm): ${data.rainfall}
       - Average Temperature (°C): ${data.temperature}
       - Pesticide Usage: ${data.pesticideUsage ? 'Yes' : 'No'}

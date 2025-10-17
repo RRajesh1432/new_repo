@@ -24,6 +24,14 @@ export enum FertilizerType {
   'None' = 'None',
 }
 
+export enum WaterSource {
+  Rainfed = 'Rainfed',
+  CanalIrrigation = 'Canal Irrigation',
+  WellIrrigation = 'Well Irrigation',
+  RiverLake = 'River/Lake',
+  DripIrrigation = 'Drip Irrigation',
+}
+
 export interface PredictionFormData {
   cropType: CropType;
   fieldShape: string; // Will store GeoJSON string of the polygon
@@ -33,6 +41,7 @@ export interface PredictionFormData {
   pesticideUsage: boolean;
   fertilizerType: FertilizerType;
   area: number; // This will now be calculated from the map
+  waterSource: WaterSource;
 }
 
 export interface Recommendation {
@@ -76,4 +85,4 @@ export interface CropInfo {
   growingCycle: string;
 }
 
-export type Page = 'predict' | 'history' | 'analytics' | 'explorer' | 'about';
+export type Page = 'predict' | 'history' | 'explorer' | 'about';
