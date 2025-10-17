@@ -1,16 +1,20 @@
-import React, { useState, useCallback } from 'react';
+import React from 'react';
+import { useState, useCallback, useContext } from 'react';
 import Header from './components/Header';
 import PredictionPage from './pages/PredictionPage';
 import HistoryPage from './pages/HistoryPage';
 import CropExplorerPage from './pages/CropExplorerPage';
 import AboutPage from './pages/AboutPage';
+import Chatbot from './components/Chatbot';
 import type { Page, PredictionFormData, PredictionResult } from './types';
 import { CropType, SoilType, FertilizerType, WaterSource } from './types';
 import { predictYield } from './services/geminiService';
 import { savePredictionToHistory } from './services/historyService';
+import { LanguageContext } from './contexts/LanguageContext';
 
 const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<Page>('predict');
+  const { locale } = useContext(LanguageContext)!;
   
   // State lifted from PredictionPage
   const [formData, setFormData] = useState<PredictionFormData>({
@@ -43,7 +47,7 @@ const App: React.FC = () => {
       setResult(null);
 
       try {
-          const predictionResult = await predictYield(formData);
+          const predictionResult = await predictYield(formData, locale);
           setResult(predictionResult);
           const historyEntry = {
               id: new Date().toISOString(),
@@ -97,6 +101,7 @@ const App: React.FC = () => {
       <main className="p-4 sm:p-6 md:p-8">
         {renderPage()}
       </main>
+      <Chatbot setCurrentPage={setCurrentPage} />
     </div>
   );
 };

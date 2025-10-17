@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useContext } from 'react';
 import { getCropInfo } from '../services/geminiService';
 import type { CropInfo } from '../types';
 import Loader from '../components/Loader';
 import { CROP_TYPES } from '../constants';
+import { LanguageContext } from '../contexts/LanguageContext';
 
 const InfoCard: React.FC<{title: string; children: React.ReactNode}> = ({ title, children }) => (
     <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
@@ -49,6 +51,7 @@ const CropExplorerPage: React.FC = () => {
     const [cropInfo, setCropInfo] = useState<CropInfo | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
+    const { locale, t } = useContext(LanguageContext)!;
 
     const fetchCropData = async (name: string) => {
         if (!name) return;
@@ -57,7 +60,7 @@ const CropExplorerPage: React.FC = () => {
         setCropInfo(null);
 
         try {
-            const info = await getCropInfo(name);
+            const info = await getCropInfo(name, locale);
             setCropInfo(info);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'An unknown error occurred.');
@@ -68,7 +71,7 @@ const CropExplorerPage: React.FC = () => {
 
     useEffect(() => {
         fetchCropData(CROP_TYPES[0]);
-    }, []);
+    }, [locale]); // Refetch data if language changes
 
     const handleSearch = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -78,8 +81,8 @@ const CropExplorerPage: React.FC = () => {
     return (
         <div className="max-w-4xl mx-auto space-y-6">
             <div className="text-center">
-                 <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">Crop Explorer</h1>
-                 <p className="mt-2 text-lg text-gray-600">Get detailed information about any crop from our AI database.</p>
+                 <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">{t('cropExplorer.title')}</h1>
+                 <p className="mt-2 text-lg text-gray-600">{t('cropExplorer.subtitle')}</p>
             </div>
             
             <form onSubmit={handleSearch} className="flex gap-2 p-4 bg-white rounded-xl shadow-md border">
@@ -97,26 +100,26 @@ const CropExplorerPage: React.FC = () => {
                     disabled={isLoading}
                     className="px-6 py-3 bg-green-600 text-white font-semibold rounded-md hover:bg-green-700 disabled:bg-gray-400 transition-colors"
                 >
-                    {isLoading ? 'Searching...' : 'Search'}
+                    {isLoading ? t('cropExplorer.searching') : t('cropExplorer.search')}
                 </button>
             </form>
             
-            {isLoading && <Loader message={`Fetching info for ${cropName}...`} />}
+            {isLoading && <Loader message={t('cropExplorer.loading', { cropName })} />}
             {error && <div className="text-center p-4 bg-red-100 text-red-700 rounded-lg">{error}</div>}
 
             {cropInfo && (
                 <div className="space-y-6 animate-fade-in">
-                    <InfoCard title={`About ${cropInfo.cropName}`}>
+                    <InfoCard title={t('cropExplorer.about', { cropName: cropInfo.cropName })}>
                         <p className="text-gray-600">{cropInfo.description}</p>
                     </InfoCard>
 
                     <div className="grid md:grid-cols-2 gap-6">
-                        <InfoCard title="Ideal Growing Conditions">
+                        <InfoCard title={t('cropExplorer.idealConditions')}>
                              <div className="space-y-6">
-                                <ConditionGauge label="Temperature Range" range={cropInfo.idealConditions.temperatureRange} unit="°C" color="#f97316" />
-                                <ConditionGauge label="Annual Rainfall" range={cropInfo.idealConditions.annualRainfall} unit="mm" color="#3b82f6" />
+                                <ConditionGauge label={t('cropExplorer.tempRange')} range={cropInfo.idealConditions.temperatureRange} unit="°C" color="#f97316" />
+                                <ConditionGauge label={t('cropExplorer.rainfall')} range={cropInfo.idealConditions.annualRainfall} unit="mm" color="#3b82f6" />
                                 <div>
-                                     <span className="font-semibold text-gray-700">Recommended Soil Types</span>
+                                     <span className="font-semibold text-gray-700">{t('cropExplorer.soilTypes')}</span>
                                      <div className="flex flex-wrap gap-2 mt-2">
                                         {cropInfo.idealConditions.soilType.map(soil => (
                                             <span key={soil} className="px-3 py-1 bg-green-100 text-green-800 text-sm font-medium rounded-full">{soil}</span>
@@ -126,14 +129,14 @@ const CropExplorerPage: React.FC = () => {
                             </div>
                         </InfoCard>
 
-                        <InfoCard title="Cultivation Details">
+                        <InfoCard title={t('cropExplorer.cultivationDetails')}>
                             <ul className="space-y-4 text-gray-700">
                                 <li>
-                                    <strong className="block text-gray-800">Growing Cycle</strong> 
+                                    <strong className="block text-gray-800">{t('cropExplorer.growingCycle')}</strong> 
                                     <span>{cropInfo.growingCycle}</span>
                                 </li>
                                 <li>
-                                    <strong className="block text-gray-800">Common Pests</strong> 
+                                    <strong className="block text-gray-800">{t('cropExplorer.commonPests')}</strong> 
                                     <span>{cropInfo.commonPests.join(', ')}</span>
                                 </li>
                             </ul>

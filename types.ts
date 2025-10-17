@@ -56,13 +56,21 @@ export interface RiskFactor {
   severity: 'High' | 'Medium' | 'Low';
 }
 
+export interface WeatherImpact {
+  overallImpact: 'Positive' | 'Neutral' | 'Negative';
+  temperatureEffect: string;
+  rainfallEffect: string;
+  keyWeatherRisks: string[];
+}
+
+
 export interface PredictionResult {
   predictedYieldWithPesticides: number;
   predictedYieldWithoutPesticides: number;
   yieldUnit: string;
   confidenceScore: number;
   summary: string;
-  weatherImpactAnalysis: string;
+  weatherImpactAnalysis: WeatherImpact;
   recommendations: Recommendation[];
   riskFactors: RiskFactor[];
 }
@@ -84,6 +92,11 @@ export interface CropInfo {
   };
   commonPests: string[];
   growingCycle: string;
+}
+
+export interface ChatMessage {
+  sender: 'user' | 'bot';
+  text: string;
 }
 
 export type Page = 'predict' | 'history' | 'explorer' | 'about';
