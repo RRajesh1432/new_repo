@@ -1,0 +1,5 @@
+{
+  "name": "Copy of AgriYield-AI",
+  "description": "A web app that lets farmers input or draw fields, collects farm & weather data, and calls Google Gemini to generate structured JSON predictions (yield, risks, recommendations), displays charts, and saves history in browser storage.",
+  "requestFramePermissions": []
+}
