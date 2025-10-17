@@ -1,6 +1,6 @@
 import React from 'react';
 import type { PredictionFormData } from '../types';
-import { CROP_TYPES, SOIL_TYPES, FERTILIZER_TYPES, WATER_SOURCES } from '../constants';
+import { CROP_TYPES, SOIL_TYPES, FERTILIZER_TYPES, WATER_SOURCES, FERTILIZER_DESCRIPTIONS } from '../constants';
 
 interface PredictionFormProps {
     formData: PredictionFormData;
@@ -15,6 +15,17 @@ const InputField: React.FC<{label: string; children: React.ReactNode}> = ({ labe
         {children}
     </div>
 );
+
+const Tooltip: React.FC<{ text: string; children: React.ReactNode }> = ({ text, children }) => {
+    return (
+      <div className="relative flex items-center group">
+        {children}
+        <div className="absolute left-0 bottom-full mb-2 w-64 p-2 bg-gray-800 text-white text-xs rounded-md shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 pointer-events-none">
+          {text}
+        </div>
+      </div>
+    );
+  };
 
 const PredictionForm: React.FC<PredictionFormProps> = ({ formData, setFormData, onSubmit, isLoading }) => {
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -47,9 +58,23 @@ const PredictionForm: React.FC<PredictionFormProps> = ({ formData, setFormData, 
                 </InputField>
 
                 <InputField label="Fertilizer Type">
-                    <select name="fertilizerType" value={formData.fertilizerType} onChange={handleChange} className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm rounded-md shadow-sm">
-                        {FERTILIZER_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
-                    </select>
+                    <div className="flex items-center gap-2">
+                        <select 
+                            name="fertilizerType" 
+                            value={formData.fertilizerType} 
+                            onChange={handleChange} 
+                            className="flex-grow mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-green-500 focus:border-green-500 sm:text-sm rounded-md shadow-sm"
+                        >
+                            {FERTILIZER_TYPES.map(type => <option key={type} value={type}>{type}</option>)}
+                        </select>
+                        <Tooltip text={FERTILIZER_DESCRIPTIONS[formData.fertilizerType]}>
+                             <div className="mt-1 flex-shrink-0 h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center cursor-help">
+                               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-600" viewBox="0 0 20 20" fill="currentColor">
+                                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                                </svg>
+                            </div>
+                        </Tooltip>
+                    </div>
                 </InputField>
 
                 <InputField label="Source of Water">
@@ -83,16 +108,6 @@ const PredictionForm: React.FC<PredictionFormProps> = ({ formData, setFormData, 
                 </InputField>
             </div>
             
-            <div className="flex items-start">
-                <div className="flex items-center h-5">
-                    <input id="pesticideUsage" name="pesticideUsage" type="checkbox" checked={formData.pesticideUsage} onChange={handleChange} className="focus:ring-green-500 h-4 w-4 text-green-600 border-gray-300 rounded"/>
-                </div>
-                <div className="ml-3 text-sm">
-                    <label htmlFor="pesticideUsage" className="font-medium text-gray-700">Pesticide Usage</label>
-                    <p className="text-gray-500">Check if pesticides are used on this crop.</p>
-                </div>
-            </div>
-
             <div className="pt-4">
                 <button type="submit" disabled={isLoading} className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors duration-200">
                     {isLoading ? 'Generating Prediction...' : 'Get Yield Prediction'}

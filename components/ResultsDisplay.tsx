@@ -25,19 +25,27 @@ const RecommendationCard: React.FC<{ item: Recommendation }> = ({ item }) => {
                 <span className={`text-xs font-medium px-2.5 py-0.5 rounded-full ${impactColor}`}>{item.impact} Impact</span>
             </div>
             <p className="text-gray-600 mt-2 text-sm">{item.description}</p>
-            {item.potentialYieldIncrease && (
-                <p className="text-sm font-medium text-green-600 mt-2">+ {item.potentialYieldIncrease}% Potential Yield</p>
-            )}
+            <div className="flex items-center flex-wrap gap-x-4 gap-y-2 mt-3">
+                 {item.potentialYieldIncrease && (
+                    <p className="text-sm font-medium text-green-600">+ {item.potentialYieldIncrease}% Potential Yield</p>
+                )}
+                {item.fertilizerType && (
+                    <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-gray-600">Suggested Fertilizer:</span>
+                        <span className="px-2.5 py-0.5 bg-indigo-100 text-indigo-800 text-xs font-semibold rounded-full">{item.fertilizerType}</span>
+                    </div>
+                )}
+            </div>
         </div>
     );
 };
 
 // Custom tooltip for the yield bar chart
-const CustomBarTooltip: React.FC<any> = ({ active, payload, label, yieldUnit, confidenceScore }) => {
+const CustomBarTooltip: React.FC<any> = ({ active, payload, label, confidenceScore, yieldUnit }) => {
     if (active && payload && payload.length) {
       return (
         <div className="p-3 bg-white border border-gray-300 rounded-lg shadow-lg">
-          <p className="font-bold text-gray-800">{`Predicted Yield: ${payload[0].value.toFixed(2)} ${yieldUnit}`}</p>
+          <p className="font-bold text-gray-800">{`${label}: ${payload[0].value.toFixed(2)} ${yieldUnit}`}</p>
           <p className="text-sm text-gray-600">{`Confidence: ${(confidenceScore * 100).toFixed(0)}%`}</p>
         </div>
       );
@@ -45,44 +53,92 @@ const CustomBarTooltip: React.FC<any> = ({ active, payload, label, yieldUnit, co
     return null;
   };
 
-const getSeverityStyles = (severity: RiskFactor['severity']): { badge: string; text: string; hex: string } => {
-    switch (severity) {
-        case 'High':
-            return { badge: 'bg-red-100 text-red-800', text: 'text-red-600', hex: '#EF4444' };
-        case 'Medium':
-            return { badge: 'bg-yellow-100 text-yellow-800', text: 'text-yellow-600', hex: '#F59E0B' };
-        case 'Low':
-        default:
-            return { badge: 'bg-blue-100 text-blue-800', text: 'text-blue-600', hex: '#3B82F6' };
+// New enhanced visualization for a single risk factor using a segmented bar graph
+const RiskItem: React.FC<{ risk: RiskFactor, isHighlighted?: boolean }> = ({ risk, isHighlighted = false }) => {
+    const severityStyles = {
+        'High': { color: 'red-500', text: 'text-red-600' },
+        'Medium': { color: 'yellow-500', text: 'text-yellow-600' },
+        'Low': { color: 'blue-500', text: 'text-blue-600' },
+    };
+
+    const currentStyle = severityStyles[risk.severity];
+    // A more impactful highlight for the specific added risk
+    const highlightClass = isHighlighted ? `bg-red-100 border-l-4 border-red-500` : `bg-gray-50`;
+
+    return (
+        <div className={`flex items-center justify-between p-3 rounded-md ${highlightClass}`}>
+            <p className={`text-sm font-medium flex-1 pr-4 ${isHighlighted ? 'text-red-900 font-bold' : 'text-gray-800'}`}>{risk.risk}</p>
+            <div className="flex items-center gap-3 flex-shrink-0">
+                {/* The segmented graph */}
+                <div className="flex w-20 space-x-1" title={`Severity: ${risk.severity}`}>
+                    <div className={`h-2 flex-1 rounded-full ${risk.severity === 'Low' || risk.severity === 'Medium' || risk.severity === 'High' ? `bg-${currentStyle.color}` : 'bg-gray-200'}`}></div>
+                    <div className={`h-2 flex-1 rounded-full ${risk.severity === 'Medium' || risk.severity === 'High' ? `bg-${currentStyle.color}` : 'bg-gray-200'}`}></div>
+                    <div className={`h-2 flex-1 rounded-full ${risk.severity === 'High' ? `bg-${currentStyle.color}` : 'bg-gray-200'}`}></div>
+                </div>
+                <span className={`text-sm font-semibold w-12 text-right ${currentStyle.text}`}>{risk.severity}</span>
+            </div>
+        </div>
+    );
+};
+
+
+// New component to list all risk factors with the new visualization
+const RiskList: React.FC<{ risks: RiskFactor[], highlightIdentifier?: string }> = ({ risks, highlightIdentifier }) => {
+    if (risks.length === 0) {
+        return <p className="text-sm text-gray-500 italic px-3 pt-2">No significant risks identified in this scenario.</p>;
     }
+    
+    const sortedRisks = [...risks].sort((a, b) => {
+        const severityOrder = { 'High': 3, 'Medium': 2, 'Low': 1 };
+        return severityOrder[b.severity] - severityOrder[a.severity];
+    });
+
+    return (
+        <div className="space-y-2">
+            {sortedRisks.map((risk, index) => (
+                <RiskItem key={index} risk={risk} isHighlighted={highlightIdentifier ? risk.risk === highlightIdentifier : false} />
+            ))}
+        </div>
+    );
 };
 
 
 const ResultsDisplay: React.FC<{ result: PredictionResult }> = ({ result }) => {
-    const yieldData = [{ name: 'Predicted Yield', value: result.predictedYield }];
+    const yieldData = [
+        { name: 'With Pesticides', value: result.predictedYieldWithPesticides },
+        { name: 'Without Pesticides', value: result.predictedYieldWithoutPesticides },
+    ];
     
-    const riskData = result.riskFactors
-        .map(rf => ({
-            ...rf,
-            severityValue: rf.severity === 'High' ? 3 : rf.severity === 'Medium' ? 2 : 1,
-        }))
-        .sort((a, b) => b.severityValue - a.severityValue);
+    const pestRiskIdentifier = "High risk of pest infestation";
+    const risksWithPesticides = result.riskFactors.filter(r => r.risk !== pestRiskIdentifier);
+    const risksWithoutPesticides = result.riskFactors; // All risks
+
+    // Calculate yield difference for clearer comparison
+    const yieldDifference = result.predictedYieldWithPesticides - result.predictedYieldWithoutPesticides;
+    const yieldPercentageDifference = result.predictedYieldWithPesticides > 0 ? (yieldDifference / result.predictedYieldWithPesticides) * 100 : 0;
 
     return (
         <div className="mt-8 space-y-8 animate-fade-in">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <Card title="Prediction Summary" className="lg:col-span-2">
                     <p className="text-gray-600">{result.summary}</p>
-                    <div className="mt-6 flex items-baseline space-x-4">
-                        <p className="text-5xl font-extrabold text-green-600">{result.predictedYield.toFixed(2)}</p>
-                        <span className="text-xl font-medium text-gray-500">{result.yieldUnit}</span>
+                    <div className="mt-6 flex items-baseline justify-around">
+                        <div className="text-center">
+                            <p className="text-sm font-medium text-gray-500">With Pesticides</p>
+                            <p className="text-5xl font-extrabold text-green-600">{result.predictedYieldWithPesticides.toFixed(2)}</p>
+                        </div>
+                        <div className="text-center">
+                            <p className="text-sm font-medium text-gray-500">Without Pesticides</p>
+                            <p className="text-5xl font-extrabold text-yellow-600">{result.predictedYieldWithoutPesticides.toFixed(2)}</p>
+                        </div>
                     </div>
-                    <div className="mt-2">
-                        <p className="text-sm text-gray-500">Confidence Score: <span className="font-bold text-gray-700">{(result.confidenceScore * 100).toFixed(0)}%</span></p>
+                    <p className="text-center text-xl font-medium text-gray-500 mt-2">{result.yieldUnit}</p>
+                    <div className="mt-4">
+                        <p className="text-sm text-gray-500 text-center">Confidence Score: <span className="font-bold text-gray-700">{(result.confidenceScore * 100).toFixed(0)}%</span></p>
                     </div>
                 </Card>
-                <Card title="Yield Potential">
-                    <ResponsiveContainer width="100%" height={200}>
+                <Card title="Yield Potential Comparison">
+                    <ResponsiveContainer width="100%" height={250}>
                         <BarChart data={yieldData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
                             <CartesianGrid strokeDasharray="3 3" />
                             <XAxis dataKey="name" />
@@ -91,57 +147,52 @@ const ResultsDisplay: React.FC<{ result: PredictionResult }> = ({ result }) => {
                                 cursor={{fill: 'rgba(16, 185, 129, 0.1)'}}
                                 content={<CustomBarTooltip yieldUnit={result.yieldUnit} confidenceScore={result.confidenceScore} />}
                             />
-                            <Bar dataKey="value" fill="#10B981" barSize={50} />
+                            <Bar dataKey="value" barSize={50}>
+                               <Cell fill="#10B981" />
+                               <Cell fill="#F59E0B" />
+                            </Bar>
                         </BarChart>
                     </ResponsiveContainer>
                 </Card>
             </div>
-
-            <Card title="Key Risk Factors">
-                 {riskData.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-                        <ul className="space-y-3">
-                            {riskData.map((item, index) => {
-                                const styles = getSeverityStyles(item.severity);
-                                return (
-                                     <li key={index} className="flex items-center justify-between">
-                                        <span className="text-gray-700">{item.risk}</span>
-                                        <span className={`text-xs font-medium px-2.5 py-0.5 rounded-full ${styles.badge}`}>{item.severity}</span>
-                                    </li>
-                                )
-                            })}
-                        </ul>
-                        <ResponsiveContainer width="100%" height={riskData.length * 40 + 20}>
-                            <BarChart
-                                data={riskData}
-                                layout="vertical"
-                                margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
-                            >
-                                <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                                <XAxis type="number" hide />
-                                <YAxis type="category" dataKey="risk" hide />
-                                <Tooltip cursor={{ fill: 'rgba(0,0,0,0.05)' }} content={({ active, payload }) => {
-                                    if (active && payload && payload.length) {
-                                        const data = payload[0].payload;
-                                        return (
-                                            <div className="p-2 bg-white border rounded shadow-lg">
-                                                <p className="text-sm">{`${data.risk}: `}<span className={`font-bold ${getSeverityStyles(data.severity).text}`}>{data.severity}</span></p>
-                                            </div>
-                                        );
-                                    }
-                                    return null;
-                                }} />
-                                <Bar dataKey="severityValue" barSize={20}>
-                                    {riskData.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={getSeverityStyles(entry.severity).hex} />
-                                    ))}
-                                </Bar>
-                            </BarChart>
-                        </ResponsiveContainer>
+            
+             <Card title="Yield Scenario Comparison">
+                 <div className="space-y-6">
+                   {/* With Pesticides */}
+                    <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
+                         <div className="flex items-center gap-4 p-4 bg-green-600 text-white">
+                             <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 1.944A11.954 11.954 0 012.166 5.026l.01.01.004.002.002.001l.002.001L2.2 5.03l.003.002.002.001.002.001a11.955 11.955 0 0115.592 0l.002-.001.002-.001.003-.002.005-.002.01-.01.01-.01A11.954 11.954 0 0110 1.944zM10 4.345a9.564 9.564 0 017.028 3.516l.01.01.003.002.002.001l.002.001L17.07 7.9l.002.002.002.001.002.001a9.565 9.565 0 01-14.14 0l.002-.001.002-.001.002-.002.003-.002.01-.01.01-.01a9.564 9.564 0 017.028-3.516zM10 18a.75.75 0 01.75-.75h.008a.75.75 0 010 1.5H10.75A.75.75 0 0110 18zm-2.25-2.25a.75.75 0 000 1.5h4.5a.75.75 0 000-1.5h-4.5z" clipRule="evenodd" /></svg>
+                             <div>
+                                <h5 className="text-xl font-bold">With Pesticides</h5>
+                                <p className="text-3xl font-bold">{result.predictedYieldWithPesticides.toFixed(2)} <span className="text-lg font-normal opacity-90">{result.yieldUnit}</span></p>
+                             </div>
+                        </div>
+                        <div className="p-4 space-y-3">
+                           <h6 className="font-semibold text-gray-700">Risk Factors:</h6>
+                           <RiskList risks={risksWithPesticides} />
+                        </div>
                     </div>
-                 ) : (
-                    <p className="text-gray-500">No significant risk factors identified.</p>
-                 )}
+
+                    {/* Without Pesticides */}
+                    <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
+                         <div className="flex items-center gap-4 p-4 bg-yellow-500 text-white">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" viewBox="0 0 20 20" fill="currentColor"><path d="M9.25 12a.75.75 0 01.75-.75h.01a.75.75 0 01.75.75v.01a.75.75 0 01-1.5 0V12zM10 15.25a.75.75 0 00-.75.75v.01a.75.75 0 001.5 0v-.01a.75.75 0 00-.75-.75z" /><path fillRule="evenodd" d="M15.312 3.264a.75.75 0 01.752 1.29l-1.42 2.458a6.25 6.25 0 11-8.288 8.288l-2.458 1.42a.75.75 0 01-1.29-.752l1.17-4.32a.75.75 0 01.752-1.29l4.32-1.17a.75.75 0 011.29.752L9.4 12.01l.933-.27a4.75 4.75 0 105.978-5.978l.27-.933 1.73-1.565z" clipRule="evenodd" /></svg>
+                             <div>
+                                <h5 className="text-xl font-bold">Without Pesticides</h5>
+                                <p className="text-3xl font-bold">{result.predictedYieldWithoutPesticides.toFixed(2)} <span className="text-lg font-normal opacity-90">{result.yieldUnit}</span></p>
+                                {yieldDifference > 0 && (
+                                    <p className="text-sm font-medium text-red-100 bg-red-800/50 px-2 py-1 rounded-md mt-1 inline-block">
+                                        - {yieldDifference.toFixed(2)} {result.yieldUnit} ({yieldPercentageDifference.toFixed(0)}% reduction)
+                                    </p>
+                                )}
+                             </div>
+                        </div>
+                        <div className="p-4 space-y-3">
+                            <h6 className="font-semibold text-gray-700">Risk Factors:</h6>
+                             <RiskList risks={risksWithoutPesticides} highlightIdentifier={pestRiskIdentifier} />
+                        </div>
+                    </div>
+                </div>
             </Card>
 
             <Card title="Actionable Recommendations">

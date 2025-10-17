@@ -1,4 +1,5 @@
 
+
 import React, { useEffect, useState, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { getHistory } from '../services/historyService';
@@ -21,7 +22,8 @@ const AnalyticsPage: React.FC = () => {
             if (!cropData[crop]) {
                 cropData[crop] = { totalYield: 0, count: 0, totalArea: 0 };
             }
-            cropData[crop].totalYield += entry.result.predictedYield * entry.formData.area;
+            // Use the higher potential yield for analytics
+            cropData[crop].totalYield += entry.result.predictedYieldWithPesticides * entry.formData.area;
             cropData[crop].totalArea += entry.formData.area;
             cropData[crop].count++;
         });

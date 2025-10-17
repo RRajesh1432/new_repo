@@ -1,4 +1,3 @@
-
 import React from 'react';
 import PredictionForm from '../components/PredictionForm';
 import ResultsDisplay from '../components/ResultsDisplay';
@@ -15,7 +14,6 @@ interface PredictionPageProps {
     handleShapeChange: (shapeGeoJSON: string, areaHectares: number) => void;
     handleSubmit: (e: React.FormEvent) => void;
 }
-
 
 const PredictionPage: React.FC<PredictionPageProps> = ({
     formData,

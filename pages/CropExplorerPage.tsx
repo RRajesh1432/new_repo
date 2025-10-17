@@ -11,6 +11,39 @@ const InfoCard: React.FC<{title: string; children: React.ReactNode}> = ({ title,
     </div>
 );
 
+// Helper to parse numeric ranges from strings like "18°C to 25°C"
+const parseNumericRange = (rangeString: string): { min: number, max: number } | null => {
+    const numbers = rangeString.match(/\d+(\.\d+)?/g);
+    if (numbers && numbers.length >= 2) {
+        return { min: parseFloat(numbers[0]), max: parseFloat(numbers[1]) };
+    }
+    if (numbers && numbers.length === 1) {
+        return { min: parseFloat(numbers[0]), max: parseFloat(numbers[0]) };
+    }
+    return null;
+};
+
+// New visual component for displaying ideal condition ranges
+const ConditionGauge: React.FC<{ label: string; range: string; unit: string; color: string }> = ({ label, range, unit, color }) => {
+    const parsedRange = parseNumericRange(range);
+
+    return (
+        <div>
+            <div className="flex justify-between items-baseline mb-1">
+                <span className="font-semibold text-gray-700">{label}</span>
+                <span className="text-sm font-medium text-gray-500">{range}</span>
+            </div>
+            {parsedRange ? (
+                 <div className="h-6 w-full bg-gray-200 rounded-full flex items-center px-1">
+                    <div className="bg-gray-200 text-center text-xs font-bold text-white rounded-full" style={{ width: '100%', height: '12px', background: `linear-gradient(to right, #e5e7eb, ${color} 20%, ${color} 80%, #e5e7eb)` }}>
+                    </div>
+                </div>
+            ) : <p className="text-sm text-gray-600">Data not available for visualization.</p>}
+        </div>
+    );
+};
+
+
 const CropExplorerPage: React.FC = () => {
     const [cropName, setCropName] = useState<string>(CROP_TYPES[0]);
     const [cropInfo, setCropInfo] = useState<CropInfo | null>(null);
@@ -79,17 +112,30 @@ const CropExplorerPage: React.FC = () => {
 
                     <div className="grid md:grid-cols-2 gap-6">
                         <InfoCard title="Ideal Growing Conditions">
-                            <ul className="space-y-2 text-gray-700">
-                                <li><strong>Soil Types:</strong> {cropInfo.idealConditions.soilType.join(', ')}</li>
-                                <li><strong>Temperature:</strong> {cropInfo.idealConditions.temperatureRange}</li>
-                                <li><strong>Rainfall:</strong> {cropInfo.idealConditions.annualRainfall}</li>
-                            </ul>
+                             <div className="space-y-6">
+                                <ConditionGauge label="Temperature Range" range={cropInfo.idealConditions.temperatureRange} unit="°C" color="#f97316" />
+                                <ConditionGauge label="Annual Rainfall" range={cropInfo.idealConditions.annualRainfall} unit="mm" color="#3b82f6" />
+                                <div>
+                                     <span className="font-semibold text-gray-700">Recommended Soil Types</span>
+                                     <div className="flex flex-wrap gap-2 mt-2">
+                                        {cropInfo.idealConditions.soilType.map(soil => (
+                                            <span key={soil} className="px-3 py-1 bg-green-100 text-green-800 text-sm font-medium rounded-full">{soil}</span>
+                                        ))}
+                                     </div>
+                                </div>
+                            </div>
                         </InfoCard>
 
                         <InfoCard title="Cultivation Details">
-                            <ul className="space-y-2 text-gray-700">
-                                <li><strong>Growing Cycle:</strong> {cropInfo.growingCycle}</li>
-                                <li><strong>Common Pests:</strong> {cropInfo.commonPests.join(', ')}</li>
+                            <ul className="space-y-4 text-gray-700">
+                                <li>
+                                    <strong className="block text-gray-800">Growing Cycle</strong> 
+                                    <span>{cropInfo.growingCycle}</span>
+                                </li>
+                                <li>
+                                    <strong className="block text-gray-800">Common Pests</strong> 
+                                    <span>{cropInfo.commonPests.join(', ')}</span>
+                                </li>
                             </ul>
                         </InfoCard>
                     </div>

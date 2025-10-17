@@ -19,7 +19,6 @@ const App: React.FC = () => {
     soilType: SoilType.Loamy,
     rainfall: 450,
     temperature: 22,
-    pesticideUsage: false,
     fertilizerType: FertilizerType['Nitrogen-based'],
     area: 0,
     waterSource: WaterSource.Rainfed,

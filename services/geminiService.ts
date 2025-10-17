@@ -12,10 +12,11 @@ const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
 const predictionSchema = {
     type: Type.OBJECT,
     properties: {
-        predictedYield: { type: Type.NUMBER, description: "Predicted yield in tons per hectare." },
+        predictedYieldWithPesticides: { type: Type.NUMBER, description: "Predicted yield in tons per hectare assuming effective pesticide usage." },
+        predictedYieldWithoutPesticides: { type: Type.NUMBER, description: "Predicted yield in tons per hectare assuming NO pesticide usage." },
         yieldUnit: { type: Type.STRING, description: "The unit for the predicted yield, e.g., 'tons/hectare'." },
         confidenceScore: { type: Type.NUMBER, description: "A score from 0.0 to 1.0 indicating model confidence." },
-        summary: { type: Type.STRING, description: "A brief summary of the prediction and key factors." },
+        summary: { type: Type.STRING, description: "A brief summary comparing the two prediction scenarios and key factors." },
         weatherImpactAnalysis: { type: Type.STRING, description: "Analysis of how weather conditions impact the yield." },
         recommendations: {
             type: Type.ARRAY,
@@ -25,7 +26,8 @@ const predictionSchema = {
                     title: { type: Type.STRING, description: "Title of the recommendation." },
                     description: { type: Type.STRING, description: "Detailed description of the recommendation." },
                     impact: { type: Type.STRING, description: "Potential impact (High, Medium, Low)." },
-                    potentialYieldIncrease: { type: Type.NUMBER, description: "Estimated percentage increase in yield if recommendation is followed." }
+                    potentialYieldIncrease: { type: Type.NUMBER, description: "Estimated percentage increase in yield if recommendation is followed." },
+                    fertilizerType: { type: Type.STRING, description: "If the recommendation is about fertilizer, specify the recommended type (e.g., 'Nitrogen-based')." }
                 },
                 required: ["title", "description", "impact"]
             }
@@ -42,7 +44,7 @@ const predictionSchema = {
             }
         }
     },
-    required: ["predictedYield", "yieldUnit", "confidenceScore", "summary", "weatherImpactAnalysis", "recommendations", "riskFactors"]
+    required: ["predictedYieldWithPesticides", "predictedYieldWithoutPesticides", "yieldUnit", "confidenceScore", "summary", "weatherImpactAnalysis", "recommendations", "riskFactors"]
 };
 
 const cropInfoSchema = {
@@ -67,10 +69,14 @@ const cropInfoSchema = {
 
 
 const generatePrompt = (data: PredictionFormData): string => {
-    const pesticideGuidance = data.pesticideUsage
-        ? "Pesticide Usage is 'Yes'. This is a critical protective measure that actively prevents crop loss. You MUST model a higher yield potential (e.g., a 5-15% increase over the baseline) due to effective pest control. Risks from common pests should be considered minimal."
-        : "Pesticide Usage is 'No'. This exposes the crop to significant risk. You MUST factor in a notable yield reduction (e.g., a 5-15% decrease from the baseline) due to unmitigated pest damage. You MUST also list a risk factor with the risk 'High risk of pest infestation' and severity 'High'.";
-        
+    const dualPredictionGuidance = `
+You MUST provide two separate yield predictions:
+1. 'predictedYieldWithPesticides': Model a higher yield potential assuming effective pesticide use, which prevents crop loss.
+2. 'predictedYieldWithoutPesticides': Model a lower yield potential, factoring in a notable yield reduction (e.g., a 5-15% decrease from the 'with pesticides' baseline) due to unmitigated pest damage.
+For the 'without pesticides' scenario, you MUST also include a risk factor: { "risk": "High risk of pest infestation", "severity": "High" }.
+The summary should clearly explain and compare both yield scenarios.
+`;
+
     let waterSourceGuidance = '';
     switch (data.waterSource) {
         case 'Rainfed':
@@ -89,9 +95,10 @@ const generatePrompt = (data: PredictionFormData): string => {
       The output must be a JSON object matching the provided schema.
 
       **Critical Interpretation Guidance:**
-      - **Pesticide Usage**: ${pesticideGuidance}
+      - **Dual Prediction Scenarios**: ${dualPredictionGuidance}
       - **Water Source**: ${waterSourceGuidance}
       - For riskFactors, provide a 'risk' description and a 'severity' level ('High', 'Medium', 'Low') for each identified risk.
+      - For recommendations related to fertilization, you MUST suggest a specific 'fertilizerType' from the available options.
 
       Farm Data:
       - Crop Type: ${data.cropType}
@@ -100,13 +107,12 @@ const generatePrompt = (data: PredictionFormData): string => {
       - Water Source: ${data.waterSource}
       - Annual Rainfall (mm): ${data.rainfall}
       - Average Temperature (°C): ${data.temperature}
-      - Pesticide Usage: ${data.pesticideUsage ? 'Yes' : 'No'}
       - Fertilizer Type: ${data.fertilizerType}
       - Area (hectares): ${data.area}
 
       Based on this data, provide a detailed analysis including predicted yield, risk factors, and actionable recommendations.
       The confidence score should reflect the quality and completeness of the input data.
-      For example, for Wheat in Loamy soil with 450mm rainfall and 22°C, you might predict around 2.8 tons/hectare.
+      For example, for Wheat in Loamy soil with 450mm rainfall and 22°C, you might predict around 2.8 tons/hectare with pesticides and 2.5 without.
     `;
 };
 
@@ -130,7 +136,7 @@ export const predictYield = async (formData: PredictionFormData): Promise<Predic
         const parsedResult = JSON.parse(jsonString);
         
         // Basic validation
-        if (!parsedResult.predictedYield || !parsedResult.summary) {
+        if (!parsedResult.predictedYieldWithPesticides || !parsedResult.summary) {
             throw new Error("Invalid JSON schema received from API.");
         }
 

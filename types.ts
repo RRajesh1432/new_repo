@@ -38,7 +38,6 @@ export interface PredictionFormData {
   soilType: SoilType;
   rainfall: number;
   temperature: number;
-  pesticideUsage: boolean;
   fertilizerType: FertilizerType;
   area: number; // This will now be calculated from the map
   waterSource: WaterSource;
@@ -49,6 +48,7 @@ export interface Recommendation {
   description: string;
   impact: 'High' | 'Medium' | 'Low';
   potentialYieldIncrease?: number;
+  fertilizerType?: FertilizerType;
 }
 
 export interface RiskFactor {
@@ -57,7 +57,8 @@ export interface RiskFactor {
 }
 
 export interface PredictionResult {
-  predictedYield: number;
+  predictedYieldWithPesticides: number;
+  predictedYieldWithoutPesticides: number;
   yieldUnit: string;
   confidenceScore: number;
   summary: string;

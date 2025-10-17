@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { getHistory, clearHistory } from '../services/historyService';
 import type { HistoryEntry, Recommendation, RiskFactor } from '../types';
@@ -24,22 +25,32 @@ const RecommendationItem: React.FC<{ item: Recommendation }> = ({ item }) => {
                 <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${impactColor}`}>{item.impact} Impact</span>
             </div>
             <p className="text-gray-600 mt-1 text-xs">{item.description}</p>
-            {item.potentialYieldIncrease && (
-                <p className="text-xs font-medium text-green-600 mt-1">+ {item.potentialYieldIncrease}% Potential Yield</p>
-            )}
+            <div className="flex items-center flex-wrap gap-x-4 gap-y-1 mt-2">
+                {item.potentialYieldIncrease && (
+                    <p className="text-xs font-medium text-green-600">+ {item.potentialYieldIncrease}% Potential Yield</p>
+                )}
+                {item.fertilizerType && (
+                    <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-medium text-gray-600">Fertilizer:</span>
+                        <span className="px-2 py-0.5 bg-indigo-100 text-indigo-800 text-[11px] font-semibold rounded-full">{item.fertilizerType}</span>
+                    </div>
+                )}
+            </div>
         </div>
     );
 };
 
-const RiskItem: React.FC<{ item: RiskFactor }> = ({ item }) => {
+const RiskItem: React.FC<{ item: RiskFactor, isHighlighted?: boolean }> = ({ item, isHighlighted = false }) => {
     const severityColor = {
         'High': 'bg-red-100 text-red-800',
         'Medium': 'bg-yellow-100 text-yellow-800',
         'Low': 'bg-blue-100 text-blue-800',
     }[item.severity];
+    
+    const highlightClass = isHighlighted ? 'ring-2 ring-yellow-500 bg-yellow-50' : '';
 
     return (
-        <li className="flex items-center justify-between text-sm py-1">
+        <li className={`flex items-center justify-between text-sm py-1 px-2 rounded-md ${highlightClass}`}>
             <span className="text-gray-700">{item.risk}</span>
             <span className={`text-xs font-medium px-2.5 py-0.5 rounded-full ${severityColor}`}>{item.severity}</span>
         </li>
@@ -49,10 +60,11 @@ const RiskItem: React.FC<{ item: RiskFactor }> = ({ item }) => {
 
 const HistoryItem: React.FC<{ entry: HistoryEntry }> = ({ entry }) => {
     const [isOpen, setIsOpen] = useState(false);
-    
-    const prettyPrintKey = (key: string) => {
-        return key.replace(/([A-Z])/g, ' $1').replace(/^./, (str) => str.toUpperCase());
-    };
+
+    const pestRiskIdentifier = "High risk of pest infestation";
+    const risksWithPesticides = entry.result.riskFactors.filter(r => r.risk !== pestRiskIdentifier);
+    const risksWithoutPesticides = entry.result.riskFactors;
+
 
     return (
         <div className="bg-white shadow-md rounded-lg overflow-hidden border border-gray-200">
@@ -66,7 +78,10 @@ const HistoryItem: React.FC<{ entry: HistoryEntry }> = ({ entry }) => {
                         <p className="text-sm text-gray-500">{entry.timestamp}</p>
                     </div>
                     <div className="flex items-center gap-4">
-                         <p className="text-xl font-bold text-gray-800">{entry.result.predictedYield.toFixed(2)} {entry.result.yieldUnit}</p>
+                         <p className="text-lg font-bold text-gray-800">
+                           <span title="With Pesticides">{entry.result.predictedYieldWithPesticides.toFixed(2)}</span> / <span className="text-yellow-700" title="Without Pesticides">{entry.result.predictedYieldWithoutPesticides.toFixed(2)}</span>
+                            <span className="text-sm font-medium text-gray-600 ml-1">{entry.result.yieldUnit}</span>
+                         </p>
                          <span className={`transform transition-transform duration-200 text-green-700 ${isOpen ? 'rotate-180' : ''}`}>▼</span>
                     </div>
                 </div>
@@ -74,27 +89,65 @@ const HistoryItem: React.FC<{ entry: HistoryEntry }> = ({ entry }) => {
             {isOpen && (
                 <div className="p-4 border-t border-gray-200 bg-gray-50/70 animate-fade-in text-sm">
                     <DetailCard title="Inputs">
-                        <ul className="text-gray-700 grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-1 text-xs">
-                            {Object.entries(entry.formData)
-                                .filter(([key]) => key !== 'fieldShape')
-                                .map(([key, value]) => (
-                                <li key={key}>
-                                    <strong className="font-medium">{prettyPrintKey(key)}:</strong>{' '}
-                                    {key === 'pesticideUsage' ? (value ? 'Yes' : 'No') : String(value)}
-                                </li>
-                            ))}
-                        </ul>
+                        <div className="space-y-4 text-xs">
+                            <div>
+                                <h5 className="font-semibold text-gray-500 uppercase tracking-wider text-[11px] mb-1">Field & Crop Details</h5>
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-1 text-gray-700">
+                                    <p><strong className="font-medium text-gray-800">Crop Type:</strong> {entry.formData.cropType}</p>
+                                    <p><strong className="font-medium text-gray-800">Area (ha):</strong> {entry.formData.area}</p>
+                                    <p><strong className="font-medium text-gray-800">Soil Type:</strong> {entry.formData.soilType}</p>
+                                </div>
+                            </div>
+                            <div className="pt-2 border-t border-gray-200">
+                                <h5 className="font-semibold text-gray-500 uppercase tracking-wider text-[11px] mb-1">Climate Conditions</h5>
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-1 text-gray-700">
+                                    <p><strong className="font-medium text-gray-800">Rainfall (mm):</strong> {entry.formData.rainfall}</p>
+                                    <p><strong className="font-medium text-gray-800">Temperature (°C):</strong> {entry.formData.temperature}</p>
+                                </div>
+                            </div>
+                            <div className="pt-2 border-t border-gray-200">
+                                <h5 className="font-semibold text-gray-500 uppercase tracking-wider text-[11px] mb-1">Farm Management</h5>
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-1 text-gray-700">
+                                    <p><strong className="font-medium text-gray-800">Fertilizer:</strong> {entry.formData.fertilizerType}</p>
+                                    <p><strong className="font-medium text-gray-800">Water Source:</strong> {entry.formData.waterSource}</p>
+                                </div>
+                            </div>
+                        </div>
                     </DetailCard>
                     <DetailCard title="Summary">
                          <p className="text-gray-700 text-xs">{entry.result.summary}</p>
                     </DetailCard>
-                    <DetailCard title="Key Risk Factors">
-                        <ul className="space-y-1">
-                            {entry.result.riskFactors.map((risk, index) => (
-                               <RiskItem key={index} item={risk} />
-                            ))}
-                        </ul>
-                    </DetailCard>
+                    
+                    {/* Scenario Comparison */}
+                    <div className="mt-4">
+                        <h4 className="font-semibold text-gray-800 mb-2">Scenario Comparison:</h4>
+                        <div className="pl-2 border-l-2 border-gray-200 grid grid-cols-1 md:grid-cols-2 gap-4">
+                           {/* With Pesticides */}
+                            <div className="bg-white p-3 rounded-lg border border-gray-200 space-y-2">
+                                <h5 className="font-bold text-green-700">With Pesticides</h5>
+                                <p className="text-gray-800 font-semibold">{entry.result.predictedYieldWithPesticides.toFixed(2)} <span className="text-xs font-normal text-gray-600">{entry.result.yieldUnit}</span></p>
+                                <h6 className="font-semibold text-xs text-gray-600 pt-1">Key Risks:</h6>
+                                <ul className="space-y-1">
+                                    {risksWithPesticides.length > 0 ? risksWithPesticides.map((risk, index) => (
+                                       <RiskItem key={index} item={risk} />
+                                    )) : <li className="text-xs text-gray-500">No other major risks identified.</li>}
+                                </ul>
+                            </div>
+                            {/* Without Pesticides */}
+                            <div className="bg-white p-3 rounded-lg border border-gray-200 space-y-2">
+                                <h5 className="font-bold text-yellow-700">Without Pesticides</h5>
+                                <p className="text-gray-800 font-semibold">{entry.result.predictedYieldWithoutPesticides.toFixed(2)} <span className="text-xs font-normal text-gray-600">{entry.result.yieldUnit}</span></p>
+                                <h6 className="font-semibold text-xs text-gray-600 pt-1">Key Risks:</h6>
+                                <ul className="space-y-1">
+                                    {risksWithoutPesticides.map((risk, index) => (
+                                       <RiskItem key={index} item={risk} isHighlighted={risk.risk === pestRiskIdentifier} />
+                                    ))}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+
                     <DetailCard title="Actionable Recommendations">
                         <div className="space-y-2">
                              {entry.result.recommendations.map((rec, index) => (
